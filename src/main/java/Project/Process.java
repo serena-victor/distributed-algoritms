@@ -136,6 +136,8 @@ public class Process extends UntypedAbstractActor {
 
     public void put(int value, boolean getBefore){
 
+        log.info("Write operation launch by process "+self().path().name()+" with the value "+value+" at timestamp "+timestamp);
+
         if (getBefore){
             get(false);
         }
@@ -150,8 +152,6 @@ public class Process extends UntypedAbstractActor {
         for (ActorRef actor : processes.references) {
             actor.tell(message, this.getSelf());
         }
-
-        log.info("Write operation launch by process "+self().path().name()+" with the value "+value+" at timestamp "+timestamp);
     }
 
     public void get(boolean overrideValue){
