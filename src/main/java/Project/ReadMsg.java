@@ -2,9 +2,9 @@ package Project;
 
 public class ReadMsg {
     
-    public boolean overrideValue;
+    public boolean putAfter;
 
-    public ReadMsg(boolean overrideValue){
-        this.overrideValue = overrideValue;
+    public ReadMsg(boolean putAfter){
+        this.putAfter = putAfter;
     }
 }

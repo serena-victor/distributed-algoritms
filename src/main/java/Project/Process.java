@@ -1,6 +1,5 @@
 package Project;
 
-import akka.actor.Actor;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.actor.UntypedAbstractActor;
@@ -9,11 +8,6 @@ import akka.event.LoggingAdapter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Random;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import Project.*;
 
 public class Process extends UntypedAbstractActor {
 
@@ -26,7 +20,7 @@ public class Process extends UntypedAbstractActor {
     private int timestamp;
     private int majority;
     private int answers; //number of answers after a request
-    private int state; //2 if the process is faulty, 1 if the process is active, 0 is the process has finished his operations
+    private int state; //1 if the process is active, 0 is the process is faulty
     private ArrayList <Integer> readValues; //save the values read 
     private ArrayList <Integer> readTimestamp; //save the read timestamp
     private int M; //number of operations
@@ -42,7 +36,7 @@ public class Process extends UntypedAbstractActor {
         this.M = M;
         done = 0;
 
-        if (state == 2){
+        if (state == 0){
             log.info("Process "+self().path().name()+" is faulty");
         }
         else {
@@ -93,25 +87,41 @@ public class Process extends UntypedAbstractActor {
         }
         else if (message instanceof ReceivedRead && state == 1){
             ReceivedRead m = (ReceivedRead) message;
-            if (m.readAnswer.get("timestamp") >= this.timestamp){
-                answers++;
-                readValues.add(m.readAnswer.get("value"));
-                readTimestamp.add(m.readAnswer.get("timestamp"));
-                if (answers > majority - 1){
-                    proposal = Collections.max(readTimestamp);
-                    if (timestamp < proposal){
-                        timestamp = proposal;
-                        if (m.overrideValue){
-                            value = readValues.get(readTimestamp.indexOf(proposal));
+            answers++;
+            readValues.add(m.readAnswer.get("value"));
+            readTimestamp.add(m.readAnswer.get("timestamp"));
+            if (answers > majority - 1){
+                proposal = Collections.max(readTimestamp);
+                if (timestamp < proposal){
+                    timestamp = proposal;
+                    if (m.putAfter){
+                        int minimum = readValues.get(0);
+                        for (int i =1; i < readValues.size(); i++){
+                            if (readTimestamp.get(i) == proposal && readValues.get(i) < minimum){
+                                minimum = readValues.get(i);
+                            }
                         }
+                        this.value = minimum;
                     }
-                    if (m.overrideValue){
-                        put(this.value, false);
+                }
+                else if (timestamp == proposal){
+                    if (m.putAfter){
+                        int minimum = readValues.get(0);
+                        for (int i =1; i < readValues.size(); i++){
+                            if (readTimestamp.get(i) == proposal && readValues.get(i) < minimum){
+                                minimum = readValues.get(i);
+                            }
+                        }
+                        this.value = minimum;
                     }
-                    answers = 0;
-                    log.info("A majority of processes answered read operation from "+self().path().name()+" the new value is "+this.value+" and new timestamp is "+this.timestamp);
-                    this.done++;
-                    this.nextOperation();
+                }
+                answers = 0;
+                log.info("A majority of processes answered read operation from "+self().path().name()+" the new value is "+this.value+" and new timestamp is "+this.timestamp);
+                if (m.putAfter){
+                    invokePut(this.value, false);
+                }
+                else {
+                    put();
                 }
             }
         }
@@ -144,24 +154,31 @@ public class Process extends UntypedAbstractActor {
         readAnswer.put("value", this.value);
         readAnswer.put("timestamp", this.timestamp);
 
-        ReceivedRead confirmation = new ReceivedRead(readAnswer, message.overrideValue);
+        ReceivedRead confirmation = new ReceivedRead(readAnswer, message.putAfter);
 
         sender.tell(confirmation, getSender());
 
         log.info("Read operation from process "+sender.path().name()+" received by process "+self().path().name());
     }
 
-    public void put(int value, boolean getBefore){
+    public void invokePut(int value, boolean getBefore){
+
+        this.value = value;
 
         log.info("Write operation launch by process "+self().path().name()+" with the value "+value);
 
         if (getBefore){
             get(false);
         }
+        else {
+            put();
+        }
+    }
+
+    public void put(){
 
         timestamp++;
         answers = 0;
-        this.value = value;
 
         WriteMsg message = new WriteMsg(value, timestamp);
 
@@ -172,7 +189,7 @@ public class Process extends UntypedAbstractActor {
         }
     }
 
-    public void get(boolean overrideValue){
+    public void get(boolean putAfter){
 
         readValues = new ArrayList<Integer>();
         readTimestamp = new ArrayList<Integer>();
@@ -181,7 +198,7 @@ public class Process extends UntypedAbstractActor {
         readTimestamp.add(this.timestamp);
         answers = 0;
 
-        ReadMsg message = new ReadMsg(overrideValue);
+        ReadMsg message = new ReadMsg(putAfter);
 
         for (ActorRef actor : processes.references) {
             if (actor.path().name() != self().path().name()){
@@ -193,15 +210,13 @@ public class Process extends UntypedAbstractActor {
     }
 
     private void nextOperation(){
-        
         if (this.done < this.M){
-            this.put(this.done * this.processes.references.size() + Integer.parseInt(self().path().name()), true);
+            this.invokePut(this.done * this.processes.references.size() + Integer.parseInt(self().path().name()), true);
         }
         else if (this.done < 2 * this.M){
             this.get(true);
         }
         else if (this.done >= 2 * this.M){
-            this.state = 0;
             log.info("Process "+self().path().name()+" has finished his operations");
         }
     }

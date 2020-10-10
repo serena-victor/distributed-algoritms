@@ -37,7 +37,7 @@ public class Main {
         for (int i = 0; i < N; i++) {
             // Instantiate processes*
             if (crash.contains(i)){
-                state = 2;
+                state = 0;
             }
             else {
                 state = 1;

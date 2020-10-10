@@ -5,10 +5,10 @@ import java.util.HashMap;
 public class ReceivedRead {
     
     public HashMap<String, Integer> readAnswer;
-    public boolean overrideValue;
+    public boolean putAfter;
 
-    public ReceivedRead(HashMap<String, Integer> readAnswer, boolean overrideValue){
+    public ReceivedRead(HashMap<String, Integer> readAnswer, boolean putAfter){
         this.readAnswer = readAnswer;
-        this.overrideValue = overrideValue;
+        this.putAfter = putAfter;
     }
 }
