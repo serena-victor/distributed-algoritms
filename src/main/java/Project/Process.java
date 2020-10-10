@@ -13,7 +13,7 @@ import java.util.HashSet;
 import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import Project.ReceivedWrite;
+import Project.*;
 
 public class Process extends UntypedAbstractActor {
 
@@ -70,7 +70,7 @@ public class Process extends UntypedAbstractActor {
         }
         else if (message instanceof ReadMsg && state == 0) {
             ReadMsg m = (ReadMsg) message;
-            this.readReceived(m, getSender(), m.overrideValue);
+            this.readReceived(m, getSender());
         }
         else if (message instanceof ReceivedWrite && state == 0){
             if (message.timestamp == this.timestamp){
@@ -100,7 +100,7 @@ public class Process extends UntypedAbstractActor {
                         put(this.value, false);
                     }
                     answers = 0;
-                    log.info("A majority of processes answered read operation from "+message.sender.path().name()+"THe new value is "+this.value+" and new timestamp is  "+this.timestamp);
+                    log.info("A majority of processes answered read operation from "+self().path().name()+"THe new value is "+this.value+" and new timestamp is  "+this.timestamp);
                     this.done++;
                     this.nextOperation();
                 }
@@ -128,14 +128,14 @@ public class Process extends UntypedAbstractActor {
         log.info("Write operation with value "+message.value+" at timestamp "+message.timestamp+" acknowledged by process "+self().path().name());
     }
 
-    private void readReceived(ReadMsg message, ActorRef sender, boolean overrideValue){
+    private void readReceived(ReadMsg message, ActorRef sender){
 
         HashMap<String, Integer> readAnswer = new HashMap<String, Integer>();
 
         readAnswer.put("value", this.value);
         readAnswer.put("timestamp", this.timestamp);
 
-        ReceivedRead confirmation = new ReceivedRead(readAnswer, overrideValue);
+        ReceivedRead confirmation = new ReceivedRead(readAnswer, message.overrideValue);
 
         sender.tell(confirmation, getSender());
 
