@@ -78,6 +78,7 @@ public class Process extends UntypedAbstractActor {
                 if (answers > majority - 1){
                     answers = 0;
                     log.info("A majority of processes acknowledged write operation with value "+message.value+" at timestamp "+message.timestamp+" by "+self().path().name());
+                    this.done++;
                     this.nextOperation();
                 }
             }
@@ -100,6 +101,7 @@ public class Process extends UntypedAbstractActor {
                     }
                     answers = 0;
                     log.info("A majority of processes answered read operation from "+message.sender.path().name()+"THe new value is "+this.value+" and new timestamp is  "+this.timestamp);
+                    this.done++;
                     this.nextOperation();
                 }
             }
