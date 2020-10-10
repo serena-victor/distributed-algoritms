@@ -22,7 +22,7 @@ public class Main {
         int state;
 
         Random r = new Random();
-        int faultyProcesses = r.nextInt(N/2);
+        int faultyProcesses = 4; //r.nextInt(N/2);
         int index = 0;
 
         system.log().info("Number of faulty processes : "+Integer.toString(faultyProcesses));

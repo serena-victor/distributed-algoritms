@@ -201,7 +201,7 @@ public class Process extends UntypedAbstractActor {
             this.get(true);
         }
         else if (this.done >= 2 * this.M){
-            this.state = 2;
+            this.state = 0;
             log.info("Process "+self().path().name()+" has finished his operations");
         }
     }
