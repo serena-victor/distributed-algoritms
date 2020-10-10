@@ -7,8 +7,8 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class Main {
 
-    public static int N = 3;
-    public static int M = 3;
+    public static int N = 10;
+    public static int M = 10;
 
 
     public static void main(String[] args) throws InterruptedException {
@@ -22,12 +22,12 @@ public class Main {
         int state;
 
         Random r = new Random();
-        int faultyProcesses = r.nextInt(N/2 + 1);
+        int faultyProcesses = r.nextInt(N/2);
         int index = 0;
 
-        system.log().info("Number of faulty processes : "+Integer.toString(N/2));
+        system.log().info("Number of faulty processes : "+Integer.toString(faultyProcesses));
 
-        for (int i = 0; i < faultyProcesses + 1; i++){
+        for (int i = 0; i < faultyProcesses; i++){
             while (crash.contains(index)){
                 index = r.nextInt(N);
             }
