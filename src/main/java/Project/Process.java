@@ -8,6 +8,7 @@ import akka.event.LoggingAdapter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.lang.Math;
 
 public class Process extends UntypedAbstractActor {
 
@@ -31,7 +32,7 @@ public class Process extends UntypedAbstractActor {
     public Process(int ID, int nb, int M, int state) {
         this.N = nb;
         this.id = ID;
-        this.majority = N/2;
+        this.majority = (int) Math.ceil(N / 2);
         this.answers = 0;
         this.state = state;
         this.timestamp = 0;

@@ -5,8 +5,8 @@ import java.util.*;
 
 public class Main {
 
-    public static int N = 10;
-    public static int M = 10;
+    public static int N = 3;
+    public static int M = 3;
 
 
     public static void main(String[] args) throws InterruptedException {
@@ -20,7 +20,7 @@ public class Main {
         int state;
 
         Random r = new Random();
-        int faultyProcesses = 4; //r.nextInt(N/2);
+        int faultyProcesses = 1; //r.nextInt(N/2);
         int index = 0;
 
         system.log().info("Number of faulty processes : "+Integer.toString(faultyProcesses));
