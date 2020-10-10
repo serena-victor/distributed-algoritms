@@ -73,34 +73,36 @@ public class Process extends UntypedAbstractActor {
             this.readReceived(m, getSender());
         }
         else if (message instanceof ReceivedWrite && state == 0){
-            if (message.timestamp == this.timestamp){
+            ReceivedWrite m = (ReceivedWrite) message;
+            if (m.timestamp == this.timestamp){
                 answers++;
                 if (answers > majority - 1){
                     answers = 0;
-                    log.info("A majority of processes acknowledged write operation with value "+message.value+" at timestamp "+message.timestamp+" by "+self().path().name());
+                    log.info("A majority of processes acknowledged write operation with value "+this.value+" at timestamp "+this.timestamp+" by process "+self().path().name());
                     this.done++;
                     this.nextOperation();
                 }
             }
         }
         else if (message instanceof ReceivedRead && state == 0){
-            if (message.readAnswer.get("timestamp") >= this.timestamp){
+            ReceivedRead m = (ReceivedRead) message;
+            if (m.readAnswer.get("timestamp") >= this.timestamp){
                 answers++;
-                readValues.add(message.readAnswer.get("value"));
-                readTimestamp.add(message.readAnswer.get("timestamp"));
+                readValues.add(m.readAnswer.get("value"));
+                readTimestamp.add(m.readAnswer.get("timestamp"));
                 if (answers > majority - 1){
                     proposal = Collections.max(readTimestamp);
                     if (timestamp < proposal){
                         timestamp = proposal;
-                        if (message.overrideValue){
+                        if (m.overrideValue){
                             value = readValues.get(readTimestamp.indexOf(proposal));
                         }
                     }
-                    if (message.overrideValue){
+                    if (m.overrideValue){
                         put(this.value, false);
                     }
                     answers = 0;
-                    log.info("A majority of processes answered read operation from "+self().path().name()+"THe new value is "+this.value+" and new timestamp is  "+this.timestamp);
+                    log.info("A majority of processes answered read operation from "+self().path().name()+"THe new value is "+this.value+" and new timestamp is "+this.timestamp);
                     this.done++;
                     this.nextOperation();
                 }
@@ -139,7 +141,7 @@ public class Process extends UntypedAbstractActor {
 
         sender.tell(confirmation, getSender());
 
-        log.info("Read operation from "+sender.path().name()+"received by process "+self().path().name());
+        log.info("Read operation from "+sender.path().name()+" received by process "+self().path().name());
     }
 
     public void put(int value, boolean getBefore){
@@ -182,12 +184,12 @@ public class Process extends UntypedAbstractActor {
     private void nextOperation(){
         
         if (this.done < this.M){
-            this.put(this.done * this.processes.references.size() + this.id, true);
+            this.put(this.done * this.processes.references.size() + Integer.parseInt(self().path().name()), true);
         }
         else if (this.done < 2 * this.M){
             this.get(true);
         }
-        else {
+        else if (this.done >= 2 * this.M){
             log.info("Process "+self().path().name()+" has finished his operations");
         }
     }
