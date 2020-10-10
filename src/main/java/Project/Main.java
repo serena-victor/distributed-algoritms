@@ -6,8 +6,8 @@ import java.util.*;
 
 public class Main {
 
-    public static int N = 10;
-    public static int M = 10;
+    public static int N = 3;
+    public static int M = 3;
 
 
     public static void main(String[] args) throws InterruptedException {

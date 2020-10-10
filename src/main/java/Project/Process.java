@@ -26,7 +26,7 @@ public class Process extends UntypedAbstractActor {
     private int timestamp;
     private int majority;
     private int answers; //number of answers after a request
-    private int state; //1 if the process is faulty, 0 otherwise
+    private int state; //2 if the process is faulty, 1 if the process is active, 0 is the process has finished his operations
     private ArrayList <Integer> readValues; //save the values read 
     private ArrayList <Integer> readTimestamp; //save the read timestamp
     private int M; //number of operations
@@ -37,7 +37,7 @@ public class Process extends UntypedAbstractActor {
         id = ID;
         majority = N/2;
         answers = 0;
-        state = 0;
+        state = 1;
         timestamp = 0;
         this.M = M;
         done = 0;
@@ -58,21 +58,21 @@ public class Process extends UntypedAbstractActor {
     
     
     public void onReceive(Object message) throws Throwable {
-        if (message instanceof Members && state == 0) {//save the system's info
+        if (message instanceof Members && state == 1) {//save the system's info
             Members m = (Members) message;
             processes = m;
             log.info("p" + self().path().name() + " received processes info");
             this.nextOperation();
         }
-        else if (message instanceof WriteMsg && state == 0) {
+        else if (message instanceof WriteMsg && state == 1) {
             WriteMsg m = (WriteMsg) message;
             this.writeReceived(m, getSender());
         }
-        else if (message instanceof ReadMsg && state == 0) {
+        else if (message instanceof ReadMsg && state == 1) {
             ReadMsg m = (ReadMsg) message;
             this.readReceived(m, getSender());
         }
-        else if (message instanceof ReceivedWrite && state == 0){
+        else if (message instanceof ReceivedWrite && state == 1){
             ReceivedWrite m = (ReceivedWrite) message;
             if (m.timestamp == this.timestamp){
                 answers++;
@@ -84,7 +84,7 @@ public class Process extends UntypedAbstractActor {
                 }
             }
         }
-        else if (message instanceof ReceivedRead && state == 0){
+        else if (message instanceof ReceivedRead && state == 1){
             ReceivedRead m = (ReceivedRead) message;
             if (m.readAnswer.get("timestamp") >= this.timestamp){
                 answers++;
@@ -102,7 +102,7 @@ public class Process extends UntypedAbstractActor {
                         put(this.value, false);
                     }
                     answers = 0;
-                    log.info("A majority of processes answered read operation from "+self().path().name()+"THe new value is "+this.value+" and new timestamp is "+this.timestamp);
+                    log.info("A majority of processes answered read operation from "+self().path().name()+" the new value is "+this.value+" and new timestamp is "+this.timestamp);
                     this.done++;
                     this.nextOperation();
                 }
@@ -141,12 +141,12 @@ public class Process extends UntypedAbstractActor {
 
         sender.tell(confirmation, getSender());
 
-        log.info("Read operation from "+sender.path().name()+" received by process "+self().path().name());
+        log.info("Read operation from process "+sender.path().name()+" received by process "+self().path().name());
     }
 
     public void put(int value, boolean getBefore){
 
-        log.info("Write operation launch by process "+self().path().name()+" with the value "+value+" at timestamp "+timestamp);
+        log.info("Write operation launch by process "+self().path().name()+" with the value "+value);
 
         if (getBefore){
             get(false);
@@ -159,7 +159,9 @@ public class Process extends UntypedAbstractActor {
         WriteMsg message = new WriteMsg(value, timestamp);
 
         for (ActorRef actor : processes.references) {
-            actor.tell(message, this.getSelf());
+            if (actor.path().name() != self().path().name()){
+                actor.tell(message, this.getSelf());
+            }
         }
     }
 
@@ -175,7 +177,9 @@ public class Process extends UntypedAbstractActor {
         ReadMsg message = new ReadMsg(overrideValue);
 
         for (ActorRef actor : processes.references) {
-            actor.tell(message, this.getSelf());
+            if (actor.path().name() != self().path().name()){
+                actor.tell(message, this.getSelf());
+            }
         }
 
         log.info("Read operation launch by process "+self().path().name());
@@ -190,6 +194,7 @@ public class Process extends UntypedAbstractActor {
             this.get(true);
         }
         else if (this.done >= 2 * this.M){
+            this.state = 2;
             log.info("Process "+self().path().name()+" has finished his operations");
         }
     }
