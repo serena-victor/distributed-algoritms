@@ -16,7 +16,7 @@ public class Process extends UntypedAbstractActor {
     private final int N;//number of processes
     private final int id;//id of current process
     private Members processes;//other processes' references
-    private int proposedTimestamp; //save the proposed timestamp in case another put operation come and override the timestamp of the last put operation, so we can still receive ackowledgements
+    private int proposedTimestamp; //save the proposed timestamp in case it changes, so we can still receive ackowledgements
     private int proposedValue; //save the value which will be written before reading 
     private int value; //current value stored
     private int timestamp; //current timestamp
