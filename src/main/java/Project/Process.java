@@ -93,7 +93,7 @@ public class Process extends UntypedAbstractActor {
             answers++;
             if (answers >= majority - 1){
                 answers = 0;
-                log.info("A majority of processes acknowledged write operation with value "+this.value+" at timestamp "+this.timestamp+" by process "+self().path().name());
+                log.info("A majority of processes acknowledged write operation by process "+self().path().name()+". My current value is "+this.value+" and my current timestamp is "+this.timestamp);
                 this.done++;
                 this.nextOperation();
             }
@@ -226,7 +226,7 @@ public class Process extends UntypedAbstractActor {
 
     private void nextOperation(){
         if (this.done < this.M){
-            this.invokePut(this.done * this.processes.references.size() + Integer.parseInt(self().path().name()), true);
+            this.invokePut(this.done * this.N + Integer.parseInt(self().path().name()), true);
         }
         else if (this.done < 2 * this.M){
             this.get(true);
