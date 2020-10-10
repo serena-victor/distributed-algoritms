@@ -32,15 +32,22 @@ public class Process extends UntypedAbstractActor {
     private int M; //number of operations
     private int done; //number of operations already performed 
     
-    public Process(int ID, int nb, int M) {
+    public Process(int ID, int nb, int M, int state) {
         N = nb;
         id = ID;
         majority = N/2;
         answers = 0;
-        state = 1;
+        this.state = state;
         timestamp = 0;
         this.M = M;
         done = 0;
+
+        if (state == 2){
+            log.info("Process "+self().path().name()+" is faulty");
+        }
+        else {
+            log.info("Process "+self().path().name()+" is active");
+        }
     }
     
     public String toString() {
@@ -50,9 +57,9 @@ public class Process extends UntypedAbstractActor {
     /**
      * Static function creating actor
      */
-    public static Props createActor(int ID, int nb, int M) {
+    public static Props createActor(int ID, int nb, int M, int state) {
         return Props.create(Process.class, () -> {
-            return new Process(ID, nb, M);
+            return new Process(ID, nb, M, state);
         });
     }
     

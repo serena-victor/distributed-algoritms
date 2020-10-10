@@ -2,6 +2,7 @@ package Project;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 
 
 public class Main {
@@ -17,10 +18,31 @@ public class Main {
         system.log().info("System started with N=" + N );
 
         ArrayList<ActorRef> references = new ArrayList<>();
+        ArrayList<Integer> crash = new ArrayList<>();
+        int state;
+
+        Random r = new Random();
+        int faultyProcesses = r.nextInt(N/2 + 1);
+        int index = 0;
+
+        system.log().info("Number of faulty processes : "+Integer.toString(N/2));
+
+        for (int i = 0; i < faultyProcesses + 1; i++){
+            while (crash.contains(index)){
+                index = r.nextInt(N);
+            }
+            crash.add(index);
+        }
 
         for (int i = 0; i < N; i++) {
-            // Instantiate processes
-            final ActorRef a = system.actorOf(Process.createActor(i + 1, N, M), "" + i);
+            // Instantiate processes*
+            if (crash.contains(i)){
+                state = 2;
+            }
+            else {
+                state = 1;
+            }
+            final ActorRef a = system.actorOf(Process.createActor(i + 1, N, M, state), "" + i);
             references.add(a);
         }
 
