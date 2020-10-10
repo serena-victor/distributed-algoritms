@@ -15,26 +15,30 @@ public class Process extends UntypedAbstractActor {
     private final int N;//number of processes
     private final int id;//id of current process
     private Members processes;//other processes' references
-    private Integer proposal;
-    private int value;
-    private int timestamp;
-    private int majority;
+    private int proposedTimestamp; //save the proposed timestamp in case another put operation come and override the timestamp of the last put operation, so we can still receive ackowledgements
+    private int proposedValue; //save the value which will be written before reading 
+    private int value; //current value stored
+    private int timestamp; //current timestamp
+    private int majority; 
     private int answers; //number of answers after a request
     private int state; //1 if the process is active, 0 is the process is faulty
     private ArrayList <Integer> readValues; //save the values read 
     private ArrayList <Integer> readTimestamp; //save the read timestamp
     private int M; //number of operations
     private int done; //number of operations already performed 
+    private int currentRead; //save the current read number to be sure to only handle answers corresponding to the last read 
     
     public Process(int ID, int nb, int M, int state) {
-        N = nb;
-        id = ID;
-        majority = N/2;
-        answers = 0;
+        this.N = nb;
+        this.id = ID;
+        this.majority = N/2;
+        this.answers = 0;
         this.state = state;
-        timestamp = 0;
+        this.timestamp = 0;
         this.M = M;
-        done = 0;
+        this.done = 0;
+        this.value = 0;
+        this.currentRead = 0;
 
         if (state == 0){
             log.info("Process "+self().path().name()+" is faulty");
@@ -75,48 +79,55 @@ public class Process extends UntypedAbstractActor {
         }
         else if (message instanceof ReceivedWrite && state == 1){
             ReceivedWrite m = (ReceivedWrite) message;
-            if (m.timestamp == this.timestamp){
-                answers++;
-                if (answers > majority - 1){
-                    answers = 0;
-                    log.info("A majority of processes acknowledged write operation with value "+this.value+" at timestamp "+this.timestamp+" by process "+self().path().name());
-                    this.done++;
-                    this.nextOperation();
-                }
-            }
+            this.acknowledgementHandling(m);
         }
         else if (message instanceof ReceivedRead && state == 1){
             ReceivedRead m = (ReceivedRead) message;
+            this.readAnswerHandling(m);
+        }
+    }
+
+    private void acknowledgementHandling(ReceivedWrite m){
+        if (m.timestamp == this.proposedTimestamp){
+            answers++;
+            if (answers >= majority - 1){
+                answers = 0;
+                log.info("A majority of processes acknowledged write operation with value "+this.value+" at timestamp "+this.timestamp+" by process "+self().path().name());
+                this.done++;
+                this.nextOperation();
+            }
+        }
+    }
+
+    private void readAnswerHandling(ReceivedRead m){
+        if (this.currentRead == m.currentRead){
             answers++;
             readValues.add(m.readAnswer.get("value"));
             readTimestamp.add(m.readAnswer.get("timestamp"));
-            if (answers > majority - 1){
-                proposal = Collections.max(readTimestamp);
-                if (timestamp < proposal){
-                    timestamp = proposal;
-                    if (m.putAfter){
-                        int minimum = readValues.get(0);
-                        for (int i =1; i < readValues.size(); i++){
-                            if (readTimestamp.get(i) == proposal && readValues.get(i) < minimum){
-                                minimum = readValues.get(i);
-                            }
+
+            if (answers >= majority - 1){
+                int maxTimestamp = Collections.max(readTimestamp);
+                if (timestamp < maxTimestamp){
+                    timestamp = maxTimestamp;
+                    int minimum = readValues.get(0);
+                    for (int i =1; i < readValues.size(); i++){
+                        if (readTimestamp.get(i) == maxTimestamp && readValues.get(i) < minimum){
+                            minimum = readValues.get(i);
                         }
-                        this.value = minimum;
                     }
+                    this.value = minimum;
                 }
-                else if (timestamp == proposal){
-                    if (m.putAfter){
-                        int minimum = readValues.get(0);
-                        for (int i =1; i < readValues.size(); i++){
-                            if (readTimestamp.get(i) == proposal && readValues.get(i) < minimum){
-                                minimum = readValues.get(i);
-                            }
+                else if (timestamp == maxTimestamp){
+                    int minimum = readValues.get(0);
+                    for (int i =1; i < readValues.size(); i++){
+                        if (readTimestamp.get(i) == maxTimestamp && readValues.get(i) < minimum){
+                            minimum = readValues.get(i);
                         }
-                        this.value = minimum;
                     }
+                    this.value = minimum;
                 }
                 answers = 0;
-                log.info("A majority of processes answered read operation from "+self().path().name()+" the new value is "+this.value+" and new timestamp is "+this.timestamp);
+                log.info("A majority of processes answered read operation from "+self().path().name()+". My current value is "+this.value+" and my current timestamp is "+this.timestamp);
                 if (m.putAfter){
                     invokePut(this.value, false);
                 }
@@ -154,7 +165,7 @@ public class Process extends UntypedAbstractActor {
         readAnswer.put("value", this.value);
         readAnswer.put("timestamp", this.timestamp);
 
-        ReceivedRead confirmation = new ReceivedRead(readAnswer, message.putAfter);
+        ReceivedRead confirmation = new ReceivedRead(readAnswer, message.putAfter, message.currentRead);
 
         sender.tell(confirmation, getSender());
 
@@ -163,7 +174,7 @@ public class Process extends UntypedAbstractActor {
 
     public void invokePut(int value, boolean getBefore){
 
-        this.value = value;
+        this.proposedValue = value;
 
         log.info("Write operation launch by process "+self().path().name()+" with the value "+value);
 
@@ -177,10 +188,12 @@ public class Process extends UntypedAbstractActor {
 
     public void put(){
 
-        timestamp++;
-        answers = 0;
+        this.value = this.proposedValue;
+        this.timestamp++;
+        this.proposedTimestamp = this.timestamp;
+        this.answers = 0;
 
-        WriteMsg message = new WriteMsg(value, timestamp);
+        WriteMsg message = new WriteMsg(this.value, this.timestamp);
 
         for (ActorRef actor : processes.references) {
             if (actor.path().name() != self().path().name()){
@@ -197,8 +210,9 @@ public class Process extends UntypedAbstractActor {
         readValues.add(this.value);
         readTimestamp.add(this.timestamp);
         answers = 0;
+        currentRead++;
 
-        ReadMsg message = new ReadMsg(putAfter);
+        ReadMsg message = new ReadMsg(putAfter, currentRead);
 
         for (ActorRef actor : processes.references) {
             if (actor.path().name() != self().path().name()){
@@ -216,8 +230,14 @@ public class Process extends UntypedAbstractActor {
         else if (this.done < 2 * this.M){
             this.get(true);
         }
-        else if (this.done >= 2 * this.M){
+        else {
             log.info("Process "+self().path().name()+" has finished his operations");
+            this.sumUp();
         }
+    }
+
+    private void sumUp(){
+        
+        log.info("Process "+self().path().name()+" [ current value : "+this.value+" | current timestamp : "+this.timestamp+" | performed operations : "+this.done+" | requested operations : "+2 * this.M+" ]");
     }
 }
