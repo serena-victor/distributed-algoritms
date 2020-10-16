@@ -5,14 +5,16 @@ import java.util.*;
 
 public class Main {
 
-    public static int N = 3;
-    public static int M = 3;
+    public static int N = 10;
+    public static int M = 10;
 
 
     public static void main(String[] args) throws InterruptedException {
 
+
         // Instantiate an actor system
         final ActorSystem system = ActorSystem.create("system");
+        
         system.log().info("System started with N=" + N );
 
         ArrayList<ActorRef> references = new ArrayList<>();
@@ -20,8 +22,9 @@ public class Main {
         int state;
 
         Random r = new Random();
-        int faultyProcesses = 1; //r.nextInt(N/2);
-        int index = 0;
+        int faultyProcesses = ((N+1)/2)-1; //r.nextInt(N/2);
+        system.log().info(" "+faultyProcesses);
+        int index = r.nextInt(N);
 
         system.log().info("Number of faulty processes : "+Integer.toString(faultyProcesses));
 

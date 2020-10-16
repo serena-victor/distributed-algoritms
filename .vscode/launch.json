@@ -1,0 +1,24 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "CodeLens (Launch) - Main",
+            "request": "launch",
+            "mainClass": "Project.Main",
+            "projectName": "myArtifact"
+        },
+        {
+            "type": "java",
+            "name": "Debug (Launch) - Current File",
+            "request": "launch",
+            "mainClass": "${file}"
+        },
+        {
+            "type": "java",
+            "name": "Debug (Launch)-CreateAndReferenceByConstruction<1-akka-create-reference-by-construction>",
+            "request": "launch",
+            "mainClass": "demo.CreateAndReferenceByConstruction",
+            "projectName": "1-akka-create-reference-by-construction"
+        }
+    ]
+}

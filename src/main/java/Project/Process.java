@@ -32,7 +32,7 @@ public class Process extends UntypedAbstractActor {
     public Process(int ID, int nb, int M, int state) {
         this.N = nb;
         this.id = ID;
-        this.majority = (int) Math.ceil(N / 2);
+        this.majority = (N+2)/2;
         this.answers = 0;
         this.state = state;
         this.timestamp = 0;
@@ -108,19 +108,10 @@ public class Process extends UntypedAbstractActor {
 
             if (answers >= majority - 1){
                 int maxTimestamp = Collections.max(readTimestamp);
-                if (timestamp < maxTimestamp){
+                if (timestamp <= maxTimestamp){
                     timestamp = maxTimestamp;
-                    int minimum = readValues.get(0);
-                    for (int i =1; i < readValues.size(); i++){
-                        if (readTimestamp.get(i) == maxTimestamp && readValues.get(i) < minimum){
-                            minimum = readValues.get(i);
-                        }
-                    }
-                    this.value = minimum;
-                }
-                else if (timestamp == maxTimestamp){
-                    int minimum = readValues.get(0);
-                    for (int i =1; i < readValues.size(); i++){
+                    int minimum = Integer.MAX_VALUE;
+                    for (int i =0; i < readValues.size(); i++){
                         if (readTimestamp.get(i) == maxTimestamp && readValues.get(i) < minimum){
                             minimum = readValues.get(i);
                         }
@@ -231,7 +222,7 @@ public class Process extends UntypedAbstractActor {
         else if (this.done < 2 * this.M){
             this.get(true);
         }
-        else {
+        else if (this.done == 2 * this.M){
             log.info("Process "+self().path().name()+" has finished his operations");
             this.sumUp();
         }
